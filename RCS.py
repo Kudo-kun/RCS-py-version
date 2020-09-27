@@ -25,7 +25,7 @@ class Testcase:
 
     def display(self):
 
-        print("| {:^2} | {:^30} | {:^3} ms | {}".format(
+        print("| {:^4} | {:^30} | {:^3} ms | {}".format(
             self.idx,
             self.status,
             self.runtime,
@@ -37,13 +37,14 @@ class Testcase:
     def reveal(self):
 
         compress = (lambda x: (x[:255] + ["", "..."][len(x) > 255]))
-        print("TESTCASE #{}".format(self.idx))
+        print("\nTESTCASE #{}".format(self.idx))
         print("VERDICT: {}".format(self.status))
         print("RUNTIME: {} ms".format(self.runtime))
         print("JUDGED AT: {}".format(self.judged_at))
         print("\nINPUT:\n{}".format(compress(self.input)))
         print("\nOUTPUT:\n{}".format(compress(self.output)))
         print("\nJURY'S OUTPUT:\n{}".format(compress(self.answer)))
+        print("\nRemark:\n{}".format(self.remark))
 
 
 class Checker:
@@ -86,7 +87,7 @@ class Checker:
             with open("results.dat", "rb") as results_file:
                 pack = load(results_file)
                 results_file.close()
-            pack[int(argv[2]) - 1].reveal()
+            pack[int(argv[2])].reveal()
         elif argv[1] == "clean":
             self._clean()
         else:
@@ -171,7 +172,7 @@ class Checker:
                     judged_at = strftime('%I:%M:%S %p, %d-%b-%Y', localtime())
 
                 status = self.VERDICT_MAP[verdict]
-                test = Testcase(idx=i+1,
+                test = Testcase(idx=i,
                                 inp=req_input,
                                 out=output,
                                 ans=req_output,
@@ -181,21 +182,24 @@ class Checker:
                                 remark=remark)
 
                 if i == 0:
-                    print("".join(['+', '-'*37, '+']))
+                    print("+{}+".format('-'*39))
+                    print("| {:^4} | {:^19} | {:^4}  | ".format('SNO', "STATUS", "RUNTIME"))
+                    print("+{}+".format('-'*39))
+                    print("+{}+".format('-'*39))
                 test.display()
-                print("".join(['+', '-'*37, '+']))
+                print("+{}+".format('-'*39))
                 pack.append(test)
 
             with open("results.dat", "wb") as results_file:
                 dump(pack, results_file)
                 results_file.close()
 
-            print("".join(['\t+', '-'*12, '+']))
-            print("\t| SCORE: {}/{} |".format(score, max_score))
-            print("".join(['\t+', '-'*12, '+']))
+            print("\t\t+{}+".format('-'*12))
+            print("\t\t| SCORE: {}/{} |".format(score, max_score))
+            print("\t\t+{}+".format('-'*12))
             if score == max_score:
-                print("\t| {:^10} |".format("\033[1;32mWELL DONE!\033[0m"))
-                print("".join(['\t+', '-'*12, '+']))
+                print("\t\t| {:^10} |".format("\033[1;32mWELL DONE!\033[0m"))
+                print("\t\t+{}+".format('-'*12))
 
         else:
             print("\033[1;31mCOMPILATION_ERROR\033[0m",)
