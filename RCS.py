@@ -1,35 +1,35 @@
+import sys
 from pickle import load, dump
 from sys import argv, exit
 from time import time, sleep, strftime, localtime
 from subprocess import run, check_output, TimeoutExpired
-from os.path import exists, splitext
+from os.path import exists, splitext, join, abspath
 from getpass import getpass
 from os import listdir
-from hashlib import sha256
 
 
 class Testcase:
 
     def __init__(self, idx, inp, out, ans, judged_at, runtime, status, remark):
 
-        self.idx = idx
-        self.status = status
-        self.remark = remark
-        self.judged_at = judged_at
-        self.input = inp.decode()
-        self.output = out.decode()
-        self.answer = ans.decode()
-        self.runtime = str(runtime)[:5]
-        if len(self.runtime) < 5:
-            self.runtime += '0'
+        self._idx = idx
+        self._status = status
+        self._remark = remark
+        self._judged_at = judged_at
+        self._input = inp.decode()
+        self._output = out.decode()
+        self._answer = ans.decode()
+        self._runtime = str(runtime)[:5]
+        if len(self._runtime) < 5:
+            self._runtime += '0'
 
     def display(self):
 
         print("| {:^4} | {:^30} | {:^3} ms | {}".format(
-            self.idx,
-            self.status,
-            self.runtime,
-            self.remark
+            self._idx,
+            self._status,
+            self._runtime,
+            self._remark
         ),
             end="\r\n"
         )
@@ -37,46 +37,41 @@ class Testcase:
     def reveal(self):
 
         compress = (lambda x: (x[:255] + ["", "..."][len(x) > 255]))
-        print("\nTESTCASE #{}".format(self.idx))
-        print("VERDICT: {}".format(self.status))
-        print("RUNTIME: {} ms".format(self.runtime))
-        print("JUDGED AT: {}".format(self.judged_at))
-        print("\nINPUT:\n{}".format(compress(self.input)))
-        print("\nOUTPUT:\n{}".format(compress(self.output)))
-        print("\nJURY'S OUTPUT:\n{}".format(compress(self.answer)))
-        print("\nRemark:\n{}".format(self.remark))
+        print("\nTESTCASE #{}".format(self._idx))
+        print("VERDICT: {}".format(self._status))
+        print("RUNTIME: {} ms".format(self._runtime))
+        print("JUDGED AT: {}".format(self._judged_at))
+        print("\nINPUT:\n{}".format(compress(self._input)))
+        print("\nOUTPUT:\n{}".format(compress(self._output)))
+        print("\nJURY'S OUTPUT:\n{}".format(compress(self._answer)))
+        print("\nRemark:\n{}".format(self._remark))
 
 
 class Checker:
 
-    def __init__(self):
+    def __init__(self, base_path):
 
-        self.TIMELIMIT = 2000
-        self.INBUILT_PASS = "friday"
+        self._TIMELIMIT = 2000
+        self._INBUILT_PASS = "friday"
 
-        self.COMPILE_CMDS = {
+        self._COMPILE_CMDS = {
             ".c": "gcc {} -o {} --std=c99 -lm",
             ".cpp": "g++ {} -o {} --std=c++17"
         }
 
-        self.VERDICT_MAP = {
+        self._VERDICT_MAP = {
             1: "\033[1;32mACCEPTED\033[0m",
             2: "\033[1;31mWRONG_ANSWER\033[0m",
             3: "\033[1;33mTIME_LIMIT_EXCEEDED\033[0m",
             4: "\033[1;31mRUNTIME_ERROR\033[0m",
         }
 
-        if argv[1] == "set_pass":
-            if self.INBUILT_PASS == getpass("enter inbuilt passwd: "):
-                self._set_pass(getpass("enter new passwd: "))
-            else:
-                print("Incorrect password. Please try again.")
-        elif argv[1] == "judge":
+        self._base_path = base_path
+        if argv[1] == "judge":
             if len(argv) < 3:
                 print("usage: RCS.py judge X.c")
                 exit(0)
-            passwd = getpass("enter current passwd: ")
-            if self._get_pass() == sha256(passwd.encode()).hexdigest():
+            if self._INBUILT_PASS == getpass("enter passwd: "):
                 self._judge(argv[2])
             else:
                 print("Incorrect password. Please try again.")
@@ -84,45 +79,29 @@ class Checker:
             if len(argv) < 3:
                 print("usage: RCS.py reveal X")
                 exit(0)
-            with open("results.dat", "rb") as results_file:
-                pack = load(results_file)
-                results_file.close()
-            pack[int(argv[2])].reveal()
+            if self._INBUILT_PASS == getpass("enter passwd"):
+                with open("results.dat", "rb") as results_file:
+                    pack = load(results_file)
+                    results_file.close()
+                pack[int(argv[2])].reveal()
+            else:
+                print("Incorrect password. Please try again.")
         elif argv[1] == "clean":
             self._clean()
         else:
-            print("usage: RCS.py set_pass | judge X.c | reveal X | clean")
-
-    def _get_pass(self):
-
-        if not exists("pass.dat"):
-            raise Exception("password file not found!")
-        with open("pass.dat", "rb") as pass_file:
-            password = load(pass_file)
-            pass_file.close()
-        return password
-
-    def _set_pass(self, new_pass):
-
-        with open("pass.dat", "wb") as pass_file:
-            new_pass_hash = sha256(new_pass.encode()).hexdigest()
-            dump(new_pass_hash, pass_file)
-            pass_file.close()
-        print("password updated!")
+            print("usage: RCS.py judge X.c | reveal X | clean")
 
     def _read(self, fname):
 
-        with open(fname, "rb") as input_file:
+        path_to_file = join(self._base_path, fname)
+        with open(path_to_file, "rb") as input_file:
             req_input = input_file.read()
             input_file.close()
         return req_input
 
     def _clean(self):
-
-        run("rm -rf inputs")
-        run("rm -rf outputs")
-        run("rm RCS.py")
-        run("rm *.dat")
+        
+        pass
 
     def _judge(self, fname):
 
@@ -130,11 +109,11 @@ class Checker:
         score = verdict = 0
         judged_at = remark = None
         stem, ext = splitext(fname)
-        if ext not in self.COMPILE_CMDS:
+        if ext not in self._COMPILE_CMDS:
             print("{} extension is not allowed.\nAvailable languages: C, C++".format(ext))
             exit(0)
-        testcases = max_score = len(listdir("inputs"))
-        command = self.COMPILE_CMDS[ext].format(fname, stem)
+        testcases = max_score = len(listdir(join(self._base_path, "inputs")))
+        command = self._COMPILE_CMDS[ext].format(fname, stem)
         process = run(command)
 
         if process.returncode == 0:
@@ -148,7 +127,7 @@ class Checker:
                     process = run("./{}".format(stem),
                                   input=req_input,
                                   capture_output=True,
-                                  timeout=self.TIMELIMIT/1000)
+                                  timeout=self._TIMELIMIT/1000)
                     end = time()
                     if process.returncode == 0:
                         output = process.stdout.strip()
@@ -171,7 +150,7 @@ class Checker:
                 finally:
                     judged_at = strftime('%I:%M:%S %p, %d-%b-%Y', localtime())
 
-                status = self.VERDICT_MAP[verdict]
+                status = self._VERDICT_MAP[verdict]
                 test = Testcase(idx=i,
                                 inp=req_input,
                                 out=output,
@@ -206,4 +185,16 @@ class Checker:
 
 
 # driver program
-model = Checker()
+def main():
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = abspath(".")
+    model = Checker(base_path=base_path)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nQuitting Judge...\n")
