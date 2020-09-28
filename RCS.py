@@ -72,7 +72,16 @@ class Checker:
                 print("usage: RCS.py judge X.c")
                 exit(0)
             if self._INBUILT_PASS == getpass("enter passwd: "):
-                self._judge(argv[2])
+                if not exists(argv[2]):
+                    files = []
+                    for file in listdir():
+                        if splitext(file)[1] in self._COMPILE_CMDS:
+                            files.append(file)
+                    temp = [" is", "s are"][len(files) > 1]
+                    files = ", ".join(files)
+                    print("Specified file doesn't exist\nCheckable file{} {}".format(temp, files))
+                else:
+                    self._judge(argv[2])
             else:
                 print("Incorrect password. Please try again.")
         elif argv[1] == "reveal":
@@ -80,14 +89,19 @@ class Checker:
                 print("usage: RCS.py reveal X")
                 exit(0)
             if self._INBUILT_PASS == getpass("enter passwd"):
-                with open("results.dat", "rb") as results_file:
-                    pack = load(results_file)
-                    results_file.close()
-                pack[int(argv[2])].reveal()
+                try:
+                    with open("results.dat", "rb") as results_file:
+                        pack = load(results_file)
+                        results_file.close()
+                    pack[int(argv[2])].reveal()
+                except FileNotFoundError:
+                    print("judge atleast once before revealing")
+                    exit(0)
             else:
                 print("Incorrect password. Please try again.")
         elif argv[1] == "clean":
-            self._clean()
+            run("rm results.dat")
+            run("rm RCS.exe")
         else:
             print("usage: RCS.py judge X.c | reveal X | clean")
 
@@ -98,10 +112,6 @@ class Checker:
             req_input = input_file.read()
             input_file.close()
         return req_input
-
-    def _clean(self):
-        
-        pass
 
     def _judge(self, fname):
 
@@ -162,7 +172,7 @@ class Checker:
 
                 if i == 0:
                     print("+{}+".format('-'*39))
-                    print("| {:^4} | {:^19} | {:^4}  | ".format('SNO', "STATUS", "RUNTIME"))
+                    print("| {:^4} | {:^19} | {:^4}  | ".format("SNO", "STATUS", "RUNTIME"))
                     print("+{}+".format('-'*39))
                     print("+{}+".format('-'*39))
                 test.display()
@@ -184,13 +194,13 @@ class Checker:
             print("\033[1;31mCOMPILATION_ERROR\033[0m",)
 
 
-# driver program
+# main function
 def main():
     try:
         base_path = sys._MEIPASS
     except Exception:
         base_path = abspath(".")
-    model = Checker(base_path=base_path)
+    Checker(base_path=base_path)
 
 
 if __name__ == "__main__":
