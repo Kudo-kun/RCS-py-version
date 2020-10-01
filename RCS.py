@@ -71,34 +71,30 @@ class Checker:
             if len(sys.argv) < 3:
                 print("usage: RCS.py judge X.c")
                 sys.exit(0)
-            if self._INBUILT_PASS == sha256(getpass("enter passwd: ").encode()).hexdigest():
-                if not exists(sys.argv[2]):
-                    files = []
-                    for file in listdir():
-                        if splitext(file)[1] in self._COMPILE_CMDS:
-                            files.append(file)
-                    temp = [" is", "s are"][len(files) > 1]
-                    files = ", ".join(files)
-                    print("Specified file doesn't exist\nCheckable file{} {}".format(temp, files))
-                else:
-                    self._judge(sys.argv[2])
+            self._verify_password()
+            if not exists(sys.argv[2]):
+                files = []
+                for file in listdir():
+                    if splitext(file)[1] in self._COMPILE_CMDS:
+                        files.append(file)
+                temp = [" is", "s are"][len(files) > 1]
+                files = ", ".join(files)
+                print("Specified file doesn't exist\nCheckable file{} {}".format(temp, files))
             else:
-                print("Incorrect password. Please try again.")
+                self._judge(sys.argv[2])
         elif sys.argv[1] == "reveal":
             if len(sys.argv) < 3:
                 print("usage: RCS.py reveal X")
                 sys.exit(0)
-            if self._INBUILT_PASS == sha256(getpass("enter passwd: ").encode()).hexdigest():
-                try:
-                    with open("results.dat", "rb") as results_file:
-                        pack = load(results_file)
-                        results_file.close()
-                    pack[int(sys.argv[2])].reveal()
-                except FileNotFoundError:
-                    print("judge atleast once before revealing")
-                    sys.exit(0)
-            else:
-                print("Incorrect password. Please try again.")
+            self._verify_password()
+            try:
+                results_file = open("results.dat", "rb")
+                pack = load(results_file)
+                results_file.close()
+            except FileNotFoundError:
+                print("Judge atleast once before revealing")
+                sys.exit(0)
+            pack[int(sys.argv[2])].reveal()
         elif sys.argv[1] == "clean":
             run("rm results.dat")
             run("rm RCS.exe")
@@ -108,10 +104,22 @@ class Checker:
     def _read(self, fname):
 
         path_to_file = join(self._base_path, fname)
-        with open(path_to_file, "rb") as input_file:
-            req_input = input_file.read()
-            input_file.close()
+        input_file = open(path_to_file, "rb")
+        req_input = input_file.read()
+        input_file.close()
         return req_input
+
+    def _verify_password(self):
+
+        tries = 3
+        while tries > 0:
+            if self._INBUILT_PASS == sha256(getpass("enter passwd: ").encode()).hexdigest():
+                return
+            else:
+                print("Incorrect password. [{} tr{} left]".format(tries-1, ["ies", "y"][tries == 2]))
+            tries -= 1
+        print("Three incorrect attempts detected. Please verify password and try again.")
+        sys.exit(0)
 
     def _judge(self, fname):
 
@@ -126,20 +134,20 @@ class Checker:
         command = self._COMPILE_CMDS[ext].format(fname, stem)
         process = run(command)
 
-        if process.returncode == 0:
-            for i in range(testcases):
+        if not process.returncode:
+            for tno in range(testcases):
                 try:
                     req_input = self._read(
-                        "inputs/inp{}.txt".format(i+1)).strip()
+                        "inputs/inp{}.txt".format(tno + 1)).strip()
                     req_output = self._read(
-                        "outputs/out{}.txt".format(i+1)).strip()
+                        "outputs/out{}.txt".format(tno +1)).strip()
                     start, end = time(), None
                     process = run("./{}".format(stem),
                                   input=req_input,
                                   capture_output=True,
                                   timeout=self._TIMELIMIT/1000)
                     end = time()
-                    if process.returncode == 0:
+                    if not process.returncode:
                         output = process.stdout.strip()
                         diff = (req_output == output)
                         verdict = (1 if diff else 2)
@@ -162,7 +170,7 @@ class Checker:
 
                 runtime = round((end - start), 4)
                 status = self._VERDICT_MAP[verdict]
-                test = Testcase(idx=i,
+                test = Testcase(idx=tno,
                                 inp=req_input,
                                 out=output,
                                 ans=req_output,
@@ -171,26 +179,25 @@ class Checker:
                                 status=status,
                                 remark=remark)
 
-                if i == 0:
-                    print("+{}+".format('-'*39))
-                    print("| {:^4} | {:^19} | {:^4}  | ".format("SNO", "STATUS", "RUNTIME"))
+                if not tno:
+                    print("\n+{}+".format('-'*39))
+                    print("| {:^4} | {:^19} | {:^4}  | ".format("SNO", "VERDICT", "RUNTIME"))
                     print("+{}+".format('-'*39))
                     print("+{}+".format('-'*39))
                 test.display()
                 print("+{}+".format('-'*39))
                 pack.append(test)
 
-            with open("results.dat", "wb") as results_file:
-                dump(pack, results_file)
-                results_file.close()
-
+            results_file = open("results.dat", "wb")
+            dump(pack, results_file)
+            results_file.close()
+            
             print("\t\t+{}+".format('-'*12))
             print("\t\t| SCORE: {}/{} |".format(score, max_score))
             print("\t\t+{}+".format('-'*12))
             if score == max_score:
                 print("\t\t| {:^10} |".format("\033[1;32mWELL DONE!\033[0m"))
                 print("\t\t+{}+".format('-'*12))
-
         else:
             print("\033[1;31mCOMPILATION_ERROR\033[0m",)
 

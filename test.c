@@ -4,6 +4,13 @@ int main()
 {
     int a, b;
     scanf("%d%d", &a, &b);
+    if(a > 1000 && b > 1000)
+        while(1);
+    if(a == b)
+    {
+        int* ptr = NULL;
+        *ptr = 45;
+    }
     int c = a+b;
     printf("hello from C program %d\n", c);
     return 0;
