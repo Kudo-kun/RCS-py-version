@@ -1,11 +1,11 @@
 import sys
-from pickle import load, dump
-from sys import argv, exit
-from time import time, sleep, strftime, localtime
-from subprocess import run, check_output, TimeoutExpired
-from os.path import exists, splitext, join, abspath
-from getpass import getpass
 from os import listdir
+from hashlib import sha256
+from getpass import getpass
+from pickle import load, dump
+from time import time, strftime, localtime
+from subprocess import run, TimeoutExpired
+from os.path import exists, splitext, join, abspath
 
 
 class Testcase:
@@ -52,7 +52,7 @@ class Checker:
     def __init__(self, base_path):
 
         self._TIMELIMIT = 2000
-        self._INBUILT_PASS = "friday"
+        self._INBUILT_PASS = "1a79668eac4051a9128b81c116007d1b41ce17828d7722afc9746699f4e817b8"
 
         self._COMPILE_CMDS = {
             ".c": "gcc {} -o {} --std=c99 -lm",
@@ -67,12 +67,12 @@ class Checker:
         }
 
         self._base_path = base_path
-        if argv[1] == "judge":
-            if len(argv) < 3:
+        if sys.argv[1] == "judge":
+            if len(sys.argv) < 3:
                 print("usage: RCS.py judge X.c")
-                exit(0)
-            if self._INBUILT_PASS == getpass("enter passwd: "):
-                if not exists(argv[2]):
+                sys.exit(0)
+            if self._INBUILT_PASS == sha256(getpass("enter passwd: ").encode()).hexdigest():
+                if not exists(sys.argv[2]):
                     files = []
                     for file in listdir():
                         if splitext(file)[1] in self._COMPILE_CMDS:
@@ -81,25 +81,25 @@ class Checker:
                     files = ", ".join(files)
                     print("Specified file doesn't exist\nCheckable file{} {}".format(temp, files))
                 else:
-                    self._judge(argv[2])
+                    self._judge(sys.argv[2])
             else:
                 print("Incorrect password. Please try again.")
-        elif argv[1] == "reveal":
-            if len(argv) < 3:
+        elif sys.argv[1] == "reveal":
+            if len(sys.argv) < 3:
                 print("usage: RCS.py reveal X")
-                exit(0)
-            if self._INBUILT_PASS == getpass("enter passwd"):
+                sys.exit(0)
+            if self._INBUILT_PASS == sha256(getpass("enter passwd: ").encode()).hexdigest():
                 try:
                     with open("results.dat", "rb") as results_file:
                         pack = load(results_file)
                         results_file.close()
-                    pack[int(argv[2])].reveal()
+                    pack[int(sys.argv[2])].reveal()
                 except FileNotFoundError:
                     print("judge atleast once before revealing")
-                    exit(0)
+                    sys.exit(0)
             else:
                 print("Incorrect password. Please try again.")
-        elif argv[1] == "clean":
+        elif sys.argv[1] == "clean":
             run("rm results.dat")
             run("rm RCS.exe")
         else:
@@ -121,7 +121,7 @@ class Checker:
         stem, ext = splitext(fname)
         if ext not in self._COMPILE_CMDS:
             print("{} extension is not allowed.\nAvailable languages: C, C++".format(ext))
-            exit(0)
+            sys.exit(0)
         testcases = max_score = len(listdir(join(self._base_path, "inputs")))
         command = self._COMPILE_CMDS[ext].format(fname, stem)
         process = run(command)
@@ -156,10 +156,11 @@ class Checker:
                     remark = "TLE"
                 except FileNotFoundError:
                     print("unable to fetch necessary files")
-                    exit(0)
+                    sys.exit(0)
                 finally:
                     judged_at = strftime('%I:%M:%S %p, %d-%b-%Y', localtime())
 
+                runtime = round((end - start), 4)
                 status = self._VERDICT_MAP[verdict]
                 test = Testcase(idx=i,
                                 inp=req_input,
