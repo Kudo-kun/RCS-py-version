@@ -175,7 +175,7 @@ class Checker:
                                 out=output,
                                 ans=req_output,
                                 judged_at=judged_at,
-                                runtime=(end-start),
+                                runtime=runtime,
                                 status=status,
                                 remark=remark)
 
