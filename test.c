@@ -11,7 +11,6 @@ int main()
         int* ptr = NULL;
         *ptr = 45;
     }
-    int c = a+b;
-    printf("hello from C program %d\n", c);
+    printf("hello from C program %d\n", a+b);
     return 0;
 }
