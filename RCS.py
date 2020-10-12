@@ -60,13 +60,13 @@ class Checker:
         }
 
         self._VERDICT_MAP = {
-            1: "\033[1;32mACCEPTED\033[0m",
-            2: "\033[1;31mWRONG_ANSWER\033[0m",
-            3: "\033[1;33mTIME_LIMIT_EXCEEDED\033[0m",
-            4: "\033[1;31mRUNTIME_ERROR\033[0m",
+            1: self._ansi_color(32, "ACCEPTED"),
+            2: self._ansi_color(31, "WRONG_ANSWER"),
+            3: self._ansi_color(33, "TIME_LIMIT_EXCEEDED"),
+            4: self._ansi_color(31, "RUNTIME_ERROR")
         }
 
-        self._base_path = base_path
+        self._BASE_PATH = base_path
         if sys.argv[1] == "judge":
             if len(sys.argv) < 3:
                 print("usage: RCS.py judge X.c")
@@ -77,8 +77,8 @@ class Checker:
                 for file in listdir():
                     if splitext(file)[1] in self._COMPILE_CMDS:
                         files.append(file)
-                temp = [" is", "s are"][len(files) > 1]
-                files = ", ".join(files)
+                temp = [" is:", "s are:"][len(files) > 1]
+                files = "\n".join(files)
                 print("Specified file doesn't exist\nCheckable file{} {}".format(temp, files))
             else:
                 self._judge(sys.argv[2])
@@ -88,9 +88,9 @@ class Checker:
                 sys.exit(0)
             self._verify_password()
             try:
-                results_file = open("results.dat", "rb")
-                pack = load(results_file)
-                results_file.close()
+                with open("results.dat", "rb") as results_file:
+                    pack = load(results_file)
+                    results_file.close()
             except FileNotFoundError:
                 print("Judge atleast once before revealing")
                 sys.exit(0)
@@ -103,11 +103,15 @@ class Checker:
 
     def _read(self, fname):
 
-        path_to_file = join(self._base_path, fname)
-        input_file = open(path_to_file, "rb")
-        req_input = input_file.read()
-        input_file.close()
+        path_to_file = join(self._BASE_PATH, fname)
+        with open(path_to_file, "rb") as input_file:
+            req_input = input_file.read()
+            input_file.close()
         return req_input
+
+    def _ansi_color(self, fgd, text):
+
+        return "\033[1;{}m{}\033[0m".format(fgd, text)
 
     def _verify_password(self):
 
@@ -130,7 +134,7 @@ class Checker:
         if ext not in self._COMPILE_CMDS:
             print("{} extension is not allowed.\nAvailable languages: C, C++".format(ext))
             sys.exit(0)
-        testcases = max_score = len(listdir(join(self._base_path, "inputs")))
+        testcases = max_score = len(listdir(join(self._BASE_PATH, "inputs")))
         command = self._COMPILE_CMDS[ext].format(fname, stem)
         process = run(command)
 
@@ -138,9 +142,9 @@ class Checker:
             for tno in range(testcases):
                 try:
                     req_input = self._read(
-                        "inputs/inp{}.txt".format(tno + 1)).strip()
+                        "inputs/inp{}.txt".format(tno+1)).strip()
                     req_output = self._read(
-                        "outputs/out{}.txt".format(tno +1)).strip()
+                        "outputs/out{}.txt".format(tno+1)).strip()
                     start, end = time(), None
                     process = run("./{}".format(stem),
                                   input=req_input,
@@ -188,18 +192,21 @@ class Checker:
                 print("+{}+".format('-'*39))
                 pack.append(test)
 
-            results_file = open("results.dat", "wb")
-            dump(pack, results_file)
-            results_file.close()
+            with open("results.dat", "wb") as results_file:
+                dump(pack, results_file)
+                results_file.close()
             
-            print("\t\t+{}+".format('-'*12))
-            print("\t\t| SCORE: {}/{} |".format(score, max_score))
-            print("\t\t+{}+".format('-'*12))
-            if score == max_score:
-                print("\t\t| {:^10} |".format("\033[1;32mWELL DONE!\033[0m"))
-                print("\t\t+{}+".format('-'*12))
+            print("\t+{}+".format('-'*23))
+            print("\t| {:^21} |".format("SCORE: {}/{}".format(score, max_score)))
+            print("\t+{}+".format('-'*23))
+            if not score:
+                print("\t| {:^21} |".format(self._ansi_color(31, "BETTER LUCK NEXT TIME")))
+                print("\t+{}+".format('-'*23))
+            elif score == max_score:
+                print("\t| {:^32} |".format(self._ansi_color(32, "WELL DONE")))
+                print("\t+{}+".format('-'*23))
         else:
-            print("\033[1;31mCOMPILATION_ERROR\033[0m",)
+            print(self._ansi_color(31, "COMPILATION_ERROR"))
 
 
 # main function
