@@ -69,25 +69,19 @@ class Checker:
         self._BASE_PATH = base_path
         if sys.argv[1] == "judge":
             if len(sys.argv) < 3:
-                print("usage: RCS.py judge X.c")
+                print("Usage: RCS.py judge X.c")
                 sys.exit(0)
-            self._verify_password()
             if not exists(sys.argv[2]):
-                files = []
-                for file in listdir():
-                    if splitext(file)[1] in self._COMPILE_CMDS:
-                        files.append(file)
-                temp = [" is:", "s are:"][len(files) > 1]
-                files = "\n".join(files)
-                print("Specified file doesn't exist\nCheckable file{} {}".format(temp, files))
+                print("Specified file doesn't exist")
             else:
+                self._verify_password()
                 self._judge(sys.argv[2])
         elif sys.argv[1] == "reveal":
             if len(sys.argv) < 3:
                 print("usage: RCS.py reveal X")
                 sys.exit(0)
-            self._verify_password()
             try:
+                self._verify_password()
                 with open("results.dat", "rb") as results_file:
                     pack = load(results_file)
                     results_file.close()
@@ -99,7 +93,7 @@ class Checker:
             run("rm results.dat")
             run("rm RCS.exe")
         else:
-            print("usage: RCS.py judge X.c | reveal X | clean")
+            print("Usage: RCS.py judge X.c | reveal X | clean")
 
     def _read(self, fname):
 
