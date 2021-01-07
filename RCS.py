@@ -11,7 +11,6 @@ from os.path import exists, splitext, join, abspath
 class Testcase:
 
     def __init__(self, idx, inp, out, ans, judged_at, runtime, status, remark):
-
         self._idx = idx
         self._status = status
         self._remark = remark
@@ -24,7 +23,6 @@ class Testcase:
             self._runtime += '0'
 
     def display(self):
-
         print("| {:^4} | {:^30} | {:^3} ms | {}".format(
             self._idx,
             self._status,
@@ -35,7 +33,6 @@ class Testcase:
         )
 
     def reveal(self):
-
         compress = (lambda x: (x[:255] + ["", "..."][len(x) > 255]))
         print("\nTESTCASE #{}".format(self._idx))
         print("VERDICT: {}".format(self._status))
@@ -50,7 +47,6 @@ class Testcase:
 class Checker:
 
     def __init__(self, base_path):
-
         self._TIMELIMIT = 2000
         self._INBUILT_PASS = "1a79668eac4051a9128b81c116007d1b41ce17828d7722afc9746699f4e817b8"
 
@@ -96,7 +92,6 @@ class Checker:
             print("Usage: RCS.py judge X.c | reveal X | clean")
 
     def _read(self, fname):
-
         path_to_file = join(self._BASE_PATH, fname)
         with open(path_to_file, "rb") as input_file:
             req_input = input_file.read()
@@ -104,11 +99,9 @@ class Checker:
         return req_input
 
     def _ansi_color(self, fgd, text):
-
         return "\033[1;{}m{}\033[0m".format(fgd, text)
 
     def _verify_password(self):
-
         tries = 3
         while tries > 0:
             if self._INBUILT_PASS == sha256(getpass("enter passwd: ").encode()).hexdigest():
@@ -120,7 +113,6 @@ class Checker:
         sys.exit(0)
 
     def _judge(self, fname):
-
         pack = []
         score = verdict = 0
         judged_at = remark = None
