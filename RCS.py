@@ -34,14 +34,14 @@ class Testcase:
 
     def reveal(self):
         compress = (lambda x: (x[:255] + ["", "..."][len(x) > 255]))
-        print("\nTESTCASE #{}".format(self._idx))
-        print("VERDICT: {}".format(self._status))
-        print("RUNTIME: {} ms".format(self._runtime))
-        print("JUDGED AT: {}".format(self._judged_at))
-        print("\nINPUT:\n{}".format(compress(self._input)))
-        print("\nOUTPUT:\n{}".format(compress(self._output)))
-        print("\nJURY'S OUTPUT:\n{}".format(compress(self._answer)))
-        print("\nRemark:\n{}".format(self._remark))
+        print(f"\nTESTCASE #{self._idx}")
+        print(f"VERDICT: {self._status}")
+        print(f"RUNTIME: {self._runtime} ms")
+        print(f"JUDGED AT: {self._judged_at}")
+        print(f"\nINPUT:\n{compress(self._input)}")
+        print(f"\nOUTPUT:\n{compress(self._output)}")
+        print(f"\nJURY'S OUTPUT:\n{compress(self._answer)}")
+        print(f"\nRemark:\n{self._remark}")
 
 
 class Checker:
@@ -86,8 +86,11 @@ class Checker:
                 sys.exit(0)
             pack[int(sys.argv[2])].reveal()
         elif sys.argv[1] == "clean":
-            run("rm results.dat")
-            run("rm RCS.exe")
+            run(args=["rm", "test"])
+            run(args=["rm", "results.dat"])
+            run(args=["rm", "RCS.py"])
+            run(args=["rm", "-rf", "inputs"])
+            run(args=["rm", "-rf", "outputs"])
         else:
             print("Usage: RCS.py judge X.c | reveal X | clean")
 
@@ -99,7 +102,7 @@ class Checker:
         return req_input
 
     def _ansi_color(self, fgd, text):
-        return "\033[1;{}m{}\033[0m".format(fgd, text)
+        return f"\033[1;{fgd}m{text}\033[0m"
 
     def _verify_password(self):
         tries = 3
@@ -107,7 +110,8 @@ class Checker:
             if self._INBUILT_PASS == sha256(getpass("enter passwd: ").encode()).hexdigest():
                 return
             else:
-                print("Incorrect password. [{} tr{} left]".format(tries-1, ["ies", "y"][tries == 2]))
+                word = ["ies", "y"][tries == 2]
+                print(f"Incorrect password. [{tries-1} tr{word} left]")
             tries -= 1
         print("Three incorrect attempts detected. Please verify password and try again.")
         sys.exit(0)
@@ -118,21 +122,21 @@ class Checker:
         judged_at = remark = None
         stem, ext = splitext(fname)
         if ext not in self._COMPILE_CMDS:
-            print("{} extension is not allowed.\nAvailable languages: C, C++".format(ext))
+            print(f"{ext} extension is not allowed.\nAvailable languages: C, C++")
             sys.exit(0)
         testcases = max_score = len(listdir(join(self._BASE_PATH, "inputs")))
-        command = self._COMPILE_CMDS[ext].format(fname, stem)
-        process = run(command)
+        command = [s for s in self._COMPILE_CMDS[ext].format(fname, stem).split()]
+        process = run(args=command)
 
         if not process.returncode:
             for tno in range(testcases):
                 try:
                     req_input = self._read(
-                        "inputs/inp{}.txt".format(tno+1)).strip()
+                        f"inputs/inp{tno+1}.txt").strip()
                     req_output = self._read(
-                        "outputs/out{}.txt".format(tno+1)).strip()
+                        f"outputs/out{tno+1}.txt").strip()
                     start, end = time(), None
-                    process = run("./{}".format(stem),
+                    process = run(args=f"./{stem}",
                                   input=req_input,
                                   capture_output=True,
                                   timeout=self._TIMELIMIT/1000)
@@ -170,27 +174,27 @@ class Checker:
                                 remark=remark)
 
                 if not tno:
-                    print("\n+{}+".format('-'*39))
+                    print(f"\n+{'-'*39}+")
                     print("| {:^4} | {:^19} | {:^4}  | ".format("SNO", "VERDICT", "RUNTIME"))
-                    print("+{}+".format('-'*39))
-                    print("+{}+".format('-'*39))
+                    print(f"+{'-'*39}+")
+                    print(f"+{'-'*39}+")
                 test.display()
-                print("+{}+".format('-'*39))
+                print(f"+{'-'*39}+")
                 pack.append(test)
 
             with open("results.dat", "wb") as results_file:
                 dump(pack, results_file)
                 results_file.close()
             
-            print("\t+{}+".format('-'*23))
-            print("\t| {:^21} |".format("SCORE: {}/{}".format(score, max_score)))
-            print("\t+{}+".format('-'*23))
+            print(f"\t+{'-'*23}+")
+            print("\t| {:^21} |".format(f"SCORE: {score}/{max_score}"))
+            print(f"\t+{'-'*23}+")
             if not score:
                 print("\t| {:^21} |".format(self._ansi_color(31, "BETTER LUCK NEXT TIME")))
-                print("\t+{}+".format('-'*23))
+                print(f"\t+{'-'*23}+")
             elif score == max_score:
                 print("\t| {:^32} |".format(self._ansi_color(32, "WELL DONE")))
-                print("\t+{}+".format('-'*23))
+                print(f"\t+{'-'*23}+")
         else:
             print(self._ansi_color(31, "COMPILATION_ERROR"))
 
