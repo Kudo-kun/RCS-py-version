@@ -18,19 +18,10 @@ class Testcase:
         self._input = inp.decode()
         self._output = out.decode()
         self._answer = ans.decode()
-        self._runtime = str(runtime)[:5]
-        if len(self._runtime) < 5:
-            self._runtime += '0'
+        self._runtime = runtime
 
     def display(self):
-        print("| {:^4} | {:^30} | {:^3} ms | {}".format(
-            self._idx,
-            self._status,
-            self._runtime,
-            self._remark
-        ),
-            end="\r\n"
-        )
+        print(f"| {self._idx :^4} | {self. _status :^30} | {self._runtime :^3} ms | {self._remark}", end="\r\n")
 
     def reveal(self):
         compress = (lambda x: (x[:255] + ["", "..."][len(x) > 255]))
@@ -98,7 +89,6 @@ class Checker:
         path_to_file = join(self._BASE_PATH, fname)
         with open(path_to_file, "rb") as input_file:
             req_input = input_file.read()
-            input_file.close()
         return req_input
 
     def _ansi_color(self, fgd, text):
@@ -118,8 +108,8 @@ class Checker:
 
     def _judge(self, fname):
         pack = []
-        score = verdict = 0
-        judged_at = remark = None
+        score, verdict = 0, 0
+        judged_at, remark = None, None
         stem, ext = splitext(fname)
         if ext not in self._COMPILE_CMDS:
             print(f"{ext} extension is not allowed.\nAvailable languages: C, C++")
@@ -162,7 +152,7 @@ class Checker:
                 finally:
                     judged_at = strftime('%I:%M:%S %p, %d-%b-%Y', localtime())
 
-                runtime = round((end - start), 4)
+                runtime = f"{end - start: .3f}"
                 status = self._VERDICT_MAP[verdict]
                 test = Testcase(idx=tno,
                                 inp=req_input,
@@ -175,7 +165,7 @@ class Checker:
 
                 if not tno:
                     print(f"\n+{'-'*39}+")
-                    print("| {:^4} | {:^19} | {:^4}  | ".format("SNO", "VERDICT", "RUNTIME"))
+                    print(f"| {'SNO' :^4} | {'VERDICT' :^19} | {'RUNTIME' :^4}  | ")
                     print(f"+{'-'*39}+")
                     print(f"+{'-'*39}+")
                 test.display()
@@ -184,16 +174,15 @@ class Checker:
 
             with open("results.dat", "wb") as results_file:
                 dump(pack, results_file)
-                results_file.close()
             
             print(f"\t+{'-'*23}+")
             print("\t| {:^21} |".format(f"SCORE: {score}/{max_score}"))
             print(f"\t+{'-'*23}+")
             if not score:
-                print("\t| {:^21} |".format(self._ansi_color(31, "BETTER LUCK NEXT TIME")))
+                print(f"\t| {self._ansi_color(31, 'BETTER LUCK NEXT TIME') :^21} |")
                 print(f"\t+{'-'*23}+")
             elif score == max_score:
-                print("\t| {:^32} |".format(self._ansi_color(32, "WELL DONE")))
+                print(f"\t| {self._ansi_color(32, 'WELL DONE') :^32} |")
                 print(f"\t+{'-'*23}+")
         else:
             print(self._ansi_color(31, "COMPILATION_ERROR"))
